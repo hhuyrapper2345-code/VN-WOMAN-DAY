@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tôn Vinh Phụ Nữ Việt Nam 20/10 | 3D Interactive Experience</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background-color: #0b020a;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-serif-title {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .font-handwriting {
+            font-family: 'Dancing Script', cursive;
+        }
+
+        /* Glassmorphism Styling */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(236, 72, 153, 0.25);
+        }
+
+        .glass-card {
+            background: rgba(25, 8, 22, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(244, 114, 182, 0.25);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        .glass-button {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.7), rgba(217, 70, 239, 0.7));
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-button:hover, .glass-button:active {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.95), rgba(217, 70, 239, 0.95));
+            box-shadow: 0 0 25px rgba(244, 114, 182, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* Glowing text effects */
+        .glow-text {
+            text-shadow: 0 0 15px rgba(244, 114, 182, 0.7), 0 0 30px rgba(217, 70, 239, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 5, 15, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(244, 114, 182, 0.4);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(244, 114, 182, 0.8);
+        }
+
+        /* Audio Visualizer Bar animation */
+        @keyframes soundWave {
+            0%, 100% { height: 4px; }
+            50% { height: 18px; }
+        }
+        .bar-anim {
+            animation: soundWave 1.2s infinite ease-in-out;
+        }
+        .bar-anim:nth-child(2) { animation-delay: 0.2s; }
+        .bar-anim:nth-child(3) { animation-delay: 0.4s; }
+        .bar-anim:nth-child(4) { animation-delay: 0.1s; }
+
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="relative min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- WebGL Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- UI Overlay Layer -->
+    <div class="relative z-10 flex flex-col justify-between min-h-screen pointer-events-none p-3 sm:p-6 md:p-8">
+
+        <!-- Top Header Navigation -->
+        <header class="w-full flex justify-between items-center pointer-events-auto max-w-7xl mx-auto gap-2">
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-full glass-panel flex items-center justify-center text-pink-400 text-base sm:text-lg shadow-lg flex-shrink-0">
+                    <i class="fa-solid fa-heart animate-pulse"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] sm:text-xs tracking-widest text-pink-300 uppercase block font-semibold leading-tight">Tôn Vinh Phụ Nữ Việt Nam</span>
+                    <span class="text-lg sm:text-2xl font-bold font-serif-title bg-clip-text text-transparent bg-gradient-to-r from-pink-300 via-rose-300 to-purple-300">20 / 10</span>
+                </div>
+            </div>
+
+            <!-- Music Audio Toggle & Sound Controls -->
+            <div class="flex items-center">
+                <button id="audio-toggle" aria-label="Toggle Audio" class="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 rounded-full flex items-center space-x-2 sm:space-x-3 pointer-events-auto hover:bg-white/10 transition-all border border-pink-500/30 text-xs sm:text-sm">
+                    <div id="audio-bars" class="flex items-end space-x-0.5 sm:space-x-1 h-4 sm:h-5 opacity-30">
+                        <span class="w-0.5 sm:w-1 bg-pink-400 rounded-full bar-anim"></span>
+                        <span class="w-0.5 sm:w-1 bg-rose-400 rounded-full bar-anim"></span>
+                        <span class="w-0.5 sm:w-1 bg-purple-400 rounded-full bar-anim"></span>
+                        <span class="w-0.5 sm:w-1 bg-pink-300 rounded-full bar-anim"></span>
+                    </div>
+                    <span id="audio-status" class="text-[11px] sm:text-xs font-semibold text-pink-200 whitespace-nowrap">Âm Nhạc: Tắt</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Center Hero Section -->
+        <main class="w-full max-w-4xl mx-auto my-auto text-center pointer-events-none py-6 sm:py-10 px-2">
+            <div class="inline-block px-3 py-1 sm:px-4 sm:py-1.5 rounded-full glass-panel text-pink-300 text-[11px] sm:text-xs md:text-sm font-medium mb-3 sm:mb-5 tracking-wider uppercase border border-pink-400/30 animate-bounce">
+                ✨ Món Quà Trái Tim & Tình Yêu Thương ✨
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold font-serif-title text-white tracking-tight leading-tight mb-3 sm:mb-5 glow-text">
+                Chào Mừng Ngày <br class="block sm:hidden">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-300 to-purple-400">Phụ Nữ Việt Nam</span>
+            </h1>
+
+            <p class="text-pink-100/90 text-xs sm:text-base md:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-6 sm:mb-8 px-2">
+                Chạm vào trái tim crystal hoặc các chòm sao lung linh trên màn hình để lan tỏa những lời chúc ngọt ngào nhất!
+            </p>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pointer-events-auto w-full max-w-xs sm:max-w-none mx-auto">
+                <button id="open-wish-btn" class="w-full sm:w-auto glass-button px-6 sm:px-8 py-3 sm:py-3.5 rounded-full font-semibold text-white text-xs sm:text-sm md:text-base flex items-center justify-center space-x-2 shadow-lg hover:shadow-pink-500/50 active:scale-95">
+                    <i class="fa-solid fa-envelope-open-text text-base"></i>
+                    <span>Mở Lời Chúc Mơ Ước</span>
+                </button>
+
+                <button id="create-wish-btn" class="w-full sm:w-auto glass-panel hover:bg-white/10 active:scale-95 px-6 sm:px-8 py-3 sm:py-3.5 rounded-full font-semibold text-pink-200 text-xs sm:text-sm md:text-base border border-pink-400/40 flex items-center justify-center space-x-2 transition-all">
+                    <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+                    <span>Gửi Lời Chúc Riêng</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- Footer / Interactive hint -->
+        <footer class="w-full text-center text-[10px] sm:text-xs text-pink-300/70 pointer-events-auto max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-1.5 sm:gap-2 pt-2">
+            <div>
+                <span class="hidden sm:inline">💡 Hướng dẫn: Xoay/Vuốt màn hình để chuyển góc nhìn 3D • Nhấp vào không gian để bắn pháo hoa</span>
+                <span class="sm:hidden">💡 Trải nghiệm: Chạm vào màn hình để tạo hiệu ứng 3D</span>
+            </div>
+            <div>
+                <span>Tôn Vinh Người Phụ Nữ Việt Nam ❤️ 20/10</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal 1: Random Envelope / Wishes Display -->
+    <div id="wish-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-card w-full max-w-lg rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-center relative transform scale-90 transition-transform duration-300 border border-pink-500/40 max-h-[90vh] flex flex-col justify-between overflow-y-auto">
+            <!-- Close Button -->
+            <button id="close-wish-modal" aria-label="Close wish modal" class="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 text-pink-200 flex items-center justify-center transition-all">
+                <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+            </button>
+
+            <!-- Envelope Icon & Content -->
+            <div class="my-auto py-2">
+                <div class="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-xl sm:text-2xl text-white shadow-lg mb-3 sm:mb-4 shadow-pink-500/30">
+                    <i class="fa-solid fa-quote-left"></i>
+                </div>
+                <h3 id="wish-target" class="text-xs sm:text-sm font-semibold uppercase tracking-widest text-pink-300 mb-2">Gửi Tới Bạn</h3>
+                <p id="wish-content" class="font-handwriting text-xl sm:text-3xl text-pink-100 leading-relaxed min-h-[100px] sm:min-h-[120px] flex items-center justify-center px-1 sm:px-3">
+                    "Chúc bạn ngày 20/10 luôn tràn ngập niềm vui, xinh đẹp tự tin và gặt hái nhiều thành công!"
+                </p>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+                <button id="next-wish-btn" class="glass-button w-full sm:w-auto px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-white flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-dice text-sm"></i>
+                    <span>Đổi Lời Chúc Khác</span>
+                </button>
+                <button id="copy-wish-btn" class="glass-panel w-full sm:w-auto hover:bg-white/20 px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-pink-200 border border-pink-400/30 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-copy text-sm"></i>
+                    <span id="copy-text">Sao Chép</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Create Custom Floating Wish 3D Banner -->
+    <div id="create-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-card w-full max-w-md rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative transform scale-90 transition-transform duration-300 border border-purple-500/40 max-h-[90vh] overflow-y-auto">
+            <button id="close-create-modal" aria-label="Close creation modal" class="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 text-pink-200 flex items-center justify-center transition-all">
+                <i class="fa-solid fa-xmark text-sm sm:text-base"></i>
+            </button>
+
+            <h3 class="text-lg sm:text-xl font-bold font-serif-title text-pink-200 mb-1 text-center">Tạo Lời Chúc Riêng Của Bạn</h3>
+            <p class="text-[11px] sm:text-xs text-pink-300/70 text-center mb-4 sm:mb-6">Lời chúc sẽ hiển thị trực tiếp lên không gian 3D rực rỡ!</p>
+
+            <form id="custom-wish-form" class="space-y-3 sm:space-y-4">
+                <div>
+                    <label for="custom-name" class="block text-[11px] sm:text-xs font-semibold text-pink-300 uppercase mb-1">Tên người nhận (Bạn)</label>
+                    <input type="text" id="custom-name" placeholder="Ví dụ: Bạn Lan, Bạn Trinh..." required
+                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-white/5 border border-pink-500/30 text-white placeholder-pink-300/30 focus:outline-none focus:border-pink-400 transition-all text-xs sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="custom-message" class="block text-[11px] sm:text-xs font-semibold text-pink-300 uppercase mb-1">Lời chúc của bạn</label>
+                    <textarea id="custom-message" rows="3" placeholder="Nhập lời chúc đong đầy yêu thương..." required
+                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-white/5 border border-pink-500/30 text-white placeholder-pink-300/30 focus:outline-none focus:border-pink-400 transition-all text-xs sm:text-sm resize-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full glass-button py-3 sm:py-3.5 rounded-xl font-semibold text-white text-xs sm:text-sm shadow-lg flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-paper-plane text-xs sm:text-sm"></i>
+                    <span>Tạo Banner 3D Ngay</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Banner Overlay Display on 3D Canvas -->
+    <div id="3d-banner-display" class="fixed bottom-12 sm:bottom-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none opacity-0 transition-opacity duration-500 w-[90%] max-w-lg">
+        <div class="glass-panel px-4 sm:px-8 py-3 sm:py-4 rounded-2xl border border-pink-400/50 text-center shadow-2xl">
+            <span id="banner-receiver" class="text-[10px] sm:text-xs uppercase font-bold text-pink-300 tracking-widest block mb-1"></span>
+            <p id="banner-text" class="font-handwriting text-xl sm:text-3xl text-white leading-snug"></p>
+        </div>
+    </div>
+
+    <!-- THREE.JS & APPLICATION SCRIPT -->
+    <script>
+        // --- 1. AUDIO SYNTHESIZER (Optimized Web Audio API) ---
+        class AmbientSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.isPlaying = false;
+                this.notes = [261.63, 329.63, 392.00, 523.25, 659.25]; // C, E, G, C5, E5
+                this.interval = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            start() {
+                this.init();
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                this.isPlaying = true;
+                this.playChimeSequence();
+                if (this.interval) clearInterval(this.interval);
+                this.interval = setInterval(() => {
+                    if (this.isPlaying) this.playChimeSequence();
+                }, 2500);
+            }
+
+            stop() {
+                this.isPlaying = false;
+                if (this.interval) clearInterval(this.interval);
+            }
+
+            playChimeSequence() {
+                if (!this.ctx || !this.isPlaying || this.ctx.state !== 'running') return;
+                const now = this.ctx.currentTime;
+                
+                for (let i = 0; i < 3; i++) {
+                    const note = this.notes[Math.floor(Math.random() * this.notes.length)];
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(note, now + i * 0.4);
+
+                    gain.gain.setValueAtTime(0, now + i * 0.4);
+                    gain.gain.linearRampToValueAtTime(0.04, now + i * 0.4 + 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.4 + 1.8);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + i * 0.4);
+                    osc.stop(now + i * 0.4 + 2.0);
+                }
+            }
+
+            triggerBurstSound() {
+                if (!this.ctx || this.ctx.state !== 'running') return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(587.33, now); // D5
+                    osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.3); // D6
+
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } catch(e) {
+                    // Fallback for restricted audio contexts
+                }
+            }
+        }
+
+        const soundEngine = new AmbientSoundEngine();
+
+        // --- 2. THREE.JS 3D ENVIRONMENT ---
+        let scene, camera, renderer;
+        let interactiveObjects = [];
+        let particlesSystem;
+        let raycaster, mouse;
+        let heartMeshGroup;
+        let animationFrameId = null;
+
+        function getResponsiveFOV() {
+            const aspect = window.innerWidth / window.innerHeight;
+            if (aspect < 0.75) return 75; // Mobile vertical
+            if (aspect < 1.2) return 68;  // Tablets
+            return 60;                    // Laptops & Desktop
+        }
+
+        function init3D() {
+            const canvas = document.getElementById('webgl-canvas');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0b020a, 0.02);
+
+            // Responsive Camera
+            const fov = getResponsiveFOV();
+            camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 18);
+
+            // High compatibility Renderer settings
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                antialias: window.devicePixelRatio < 2, 
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffb6c1, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(10, 20, 15);
+            scene.add(dirLight);
+
+            const pointLightPink = new THREE.PointLight(0xff1493, 3, 30);
+            pointLightPink.position.set(-5, 5, 5);
+            scene.add(pointLightPink);
+
+            const pointLightGold = new THREE.PointLight(0xffd700, 2, 30);
+            pointLightGold.position.set(5, -5, 5);
+            scene.add(pointLightGold);
+
+            // Create 3D Meshes
+            createCentralHeartGroup();
+            createFloatingPetalsAndHearts();
+            createParticleBackground();
+
+            // Raycaster & Mouse setup
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Cross-platform Event Listeners
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('pointermove', onPointerMove, { passive: true });
+            window.addEventListener('pointerdown', onClickCanvas, false);
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animate();
+        }
+
+        function createHeartGeometry() {
+            const shape = new THREE.Shape();
+            const x = 0, y = 0;
+            shape.moveTo(x + 0.25, y + 0.25);
+            shape.bezierCurveTo(x + 0.25, y + 0.25, x + 0.2, y, x, y);
+            shape.bezierCurveTo(x - 0.3, y, x - 0.3, y + 0.35, x - 0.3, y + 0.35);
+            shape.bezierCurveTo(x - 0.3, y + 0.55, x - 0.1, y + 0.77, x + 0.25, y + 0.95);
+            shape.bezierCurveTo(x + 0.6, y + 0.77, x + 0.8, y + 0.55, x + 0.8, y + 0.35);
+            shape.bezierCurveTo(x + 0.8, y + 0.35, x + 0.8, y, x + 0.5, y);
+            shape.bezierCurveTo(x + 0.35, y, x + 0.25, y + 0.25, x + 0.25, y + 0.25);
+
+            const extrudeSettings = {
+                steps: 1,
+                depth: 0.25,
+                bevelEnabled: true,
+                bevelThickness: 0.08,
+                bevelSize: 0.08,
+                bevelSegments: 3
+            };
+
+            const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geom.center();
+            return geom;
+        }
+
+        function createCentralHeartGroup() {
+            heartMeshGroup = new THREE.Group();
+
+            const heartGeom = createHeartGeometry();
+
+            const glassMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xf472b6,
+                emissive: 0x831843,
+                emissiveIntensity: 0.3,
+                metalness: 0.2,
+                roughness: 0.1,
+                transmission: 0.6,
+                opacity: 1,
+                transparent: true,
+                reflectivity: 0.9,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1
+            });
+
+            const mainHeart = new THREE.Mesh(heartGeom, glassMaterial);
+            
+            const baseScale = window.innerWidth < 640 ? 2.8 : 3.5;
+            mainHeart.scale.set(baseScale, baseScale, baseScale);
+            mainHeart.rotation.x = Math.PI;
+            heartMeshGroup.add(mainHeart);
+
+            const ringGeom = new THREE.TorusGeometry(window.innerWidth < 640 ? 2.6 : 3.2, 0.05, 12, 64);
+            const ringMat = new THREE.MeshStandardMaterial({
+                color: 0xfcb6d0,
+                metalness: 0.9,
+                roughness: 0.1,
+                emissive: 0xd946ef,
+                emissiveIntensity: 0.2
+            });
+            const ring = new THREE.Mesh(ringGeom, ringMat);
+            ring.rotation.x = Math.PI / 3;
+            heartMeshGroup.add(ring);
+
+            scene.add(heartMeshGroup);
+            interactiveObjects.push(mainHeart);
+        }
+
+        function createFloatingPetalsAndHearts() {
+            const heartGeom = createHeartGeometry();
+            
+            const materials = [
+                new THREE.MeshStandardMaterial({ color: 0xf472b6, metalness: 0.5, roughness: 0.2 }),
+                new THREE.MeshStandardMaterial({ color: 0xfb7185, metalness: 0.4, roughness: 0.3 }),
+                new THREE.MeshStandardMaterial({ color: 0xe879f9, metalness: 0.6, roughness: 0.1 }),
+                new THREE.MeshStandardMaterial({ color: 0xffd1dc, metalness: 0.3, roughness: 0.2 })
+            ];
+
+            const count = window.innerWidth < 640 ? 14 : 24;
+
+            for (let i = 0; i < count; i++) {
+                const mat = materials[Math.floor(Math.random() * materials.length)];
+                const mesh = new THREE.Mesh(heartGeom, mat);
+
+                mesh.position.set(
+                    (Math.random() - 0.5) * 25,
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 15 - 2
+                );
+
+                const scale = Math.random() * 0.7 + 0.3;
+                mesh.scale.set(scale, scale, scale);
+                mesh.rotation.x = Math.PI + Math.random();
+                mesh.rotation.y = Math.random() * Math.PI;
+
+                mesh.userData = {
+                    velocityY: Math.random() * 0.012 + 0.005,
+                    rotSpeedX: (Math.random() - 0.5) * 0.02,
+                    rotSpeedY: (Math.random() - 0.5) * 0.02
+                };
+
+                scene.add(mesh);
+                interactiveObjects.push(mesh);
+            }
+        }
+
+        function createParticleBackground() {
+            const particleCount = window.innerWidth < 640 ? 300 : 500;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            const colorPink = new THREE.Color(0xf472b6);
+            const colorGold = new THREE.Color(0xfde047);
+            const colorWhite = new THREE.Color(0xffffff);
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 40;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
+
+                const mixedColor = colorPink.clone();
+                const rand = Math.random();
+                if (rand > 0.6) mixedColor.lerp(colorGold, Math.random());
+                else if (rand > 0.3) mixedColor.lerp(colorWhite, Math.random());
+
+                colors[i * 3] = mixedColor.r;
+                colors[i * 3 + 1] = mixedColor.g;
+                colors[i * 3 + 2] = mixedColor.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: window.innerWidth < 640 ? 0.16 : 0.14,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            particlesSystem = new THREE.Points(geometry, material);
+            scene.add(particlesSystem);
+        }
+
+        function createExplosionBurst(point) {
+            const count = 35;
+            const geom = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+
+            const px = (point && typeof point.x === 'number') ? point.x : 0;
+            const py = (point && typeof point.y === 'number') ? point.y : 0;
+            const pz = (point && typeof point.z === 'number') ? point.z : 0;
+
+            for (let i = 0; i < count; i++) {
+                positions[i * 3] = px;
+                positions[i * 3 + 1] = py;
+                positions[i * 3 + 2] = pz;
+
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.22,
+                    y: (Math.random() - 0.5) * 0.22,
+                    z: (Math.random() - 0.5) * 0.22
+                });
+            }
+
+            geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.18,
+                color: 0xf472b6,
+                transparent: true,
+                opacity: 1,
+                blending: THREE.AdditiveBlending
+            });
+
+            const pSystem = new THREE.Points(geom, mat);
+            scene.add(pSystem);
+
+            let frame = 0;
+            function animateBurst() {
+                frame++;
+                const pos = pSystem.geometry.attributes.position.array;
+
+                for (let i = 0; i < count; i++) {
+                    pos[i * 3] += velocities[i].x;
+                    pos[i * 3 + 1] += velocities[i].y;
+                    pos[i * 3 + 2] += velocities[i].z;
+                }
+
+                pSystem.geometry.attributes.position.needsUpdate = true;
+                mat.opacity -= 0.03;
+
+                if (frame < 32 && mat.opacity > 0) {
+                    requestAnimationFrame(animateBurst);
+                } else {
+                    // Memory Cleanup: prevent WebGL leak on repeated visits
+                    scene.remove(pSystem);
+                    geom.dispose();
+                    mat.dispose();
+                }
+            }
+            animateBurst();
+        }
+
+        // Pointer/Touch Position Tracking
+        let targetCameraX = 0;
+        let targetCameraY = 0;
+
+        function onPointerMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            targetCameraX = mouse.x * 2;
+            targetCameraY = mouse.y * 2;
+        }
+
+        function onClickCanvas(event) {
+            if (event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('form') || event.target.closest('#wish-modal') || event.target.closest('#create-modal')) {
+                return;
+            }
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects);
+
+            if (intersects.length > 0) {
+                const clickedObj = intersects[0].object;
+                createExplosionBurst(intersects[0].point);
+                soundEngine.triggerBurstSound();
+
+                clickedObj.scale.multiplyScalar(1.2);
+                setTimeout(() => {
+                    if (clickedObj) clickedObj.scale.divideScalar(1.2);
+                }, 200);
+            } else {
+                const vector = new THREE.Vector3(mouse.x, mouse.y, 0.5);
+                vector.unproject(camera);
+                const dir = vector.sub(camera.position).normalize();
+                const distance = -camera.position.z / dir.z;
+                const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+                createExplosionBurst(pos);
+                soundEngine.triggerBurstSound();
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.fov = getResponsiveFOV();
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            if (heartMeshGroup && heartMeshGroup.children[0]) {
+                const baseScale = window.innerWidth < 640 ? 2.8 : 3.5;
+                heartMeshGroup.children[0].scale.set(baseScale, baseScale, baseScale);
+            }
+        }
+
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+
+            camera.position.x += (targetCameraX - camera.position.x) * 0.05;
+            camera.position.y += (-targetCameraY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            if (heartMeshGroup) {
+                heartMeshGroup.rotation.y += 0.008;
+                heartMeshGroup.position.y = Math.sin(Date.now() * 0.0015) * 0.4;
+            }
+
+            if (particlesSystem) {
+                particlesSystem.rotation.y += 0.0005;
+            }
+
+            interactiveObjects.forEach((obj) => {
+                if (heartMeshGroup && obj !== heartMeshGroup.children[0]) {
+                    obj.position.y += obj.userData.velocityY;
+                    obj.rotation.x += obj.userData.rotSpeedX;
+                    obj.rotation.y += obj.userData.rotSpeedY;
+
+                    if (obj.position.y > 12) {
+                        obj.position.y = -12;
+                    }
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // --- 3. UI INTERACTION & WISHES DATABASE ---
+        const wishesData = [
+            { target: "Gửi Tới Bạn", text: "Chúc bạn ngày 20/10 thật nhiều niềm vui, luôn xinh đẹp, rạng rỡ và tự tin trên mọi chặng đường!" },
+            { target: "Gửi Tới Bạn", text: "Tôi chúc bạn mỗi ngày đều ngập tràn nụ cười, luôn là phiên bản hạnh phúc nhất của chính mình!" },
+            { target: "Gửi Tới Bạn", text: "Nhân ngày 20/10, tôi mong mọi điều may mắn, an nhiên và thành công luôn đồng hành cùng bạn!" },
+            { target: "Gửi Tới Bạn", text: "Chúc bạn luôn giữ vững ngọn lửa nhiệt huyết, theo đuổi đam mê và tỏa sáng rực rỡ nhé!" },
+            { target: "Gửi Tới Bạn", text: "Tôi xin chúc bạn nhận được thật nhiều hoa, quà và tình yêu thương trọn vẹn trong ngày đặc biệt này!" },
+            { target: "Gửi Tới Bạn", text: "Chúc bạn luôn cảm thấy được trân trọng, yêu thương và hạnh phúc trong từng khoảnh khắc!" },
+            { target: "Gửi Tới Bạn", text: "Tôi tin rằng bạn luôn có sức mạnh để vượt qua mọi thử thách. Chúc bạn ngày Phụ nữ Việt Nam trọn vẹn niềm vui!" }
+        ];
+
+        // DOM Elements
+        const audioBtn = document.getElementById('audio-toggle');
+        const audioBars = document.getElementById('audio-bars');
+        const audioStatus = document.getElementById('audio-status');
+
+        const wishModal = document.getElementById('wish-modal');
+        const openWishBtn = document.getElementById('open-wish-btn');
+        const closeWishBtn = document.getElementById('close-wish-modal');
+        const nextWishBtn = document.getElementById('next-wish-btn');
+        const copyWishBtn = document.getElementById('copy-wish-btn');
+        const copyText = document.getElementById('copy-text');
+        const wishTarget = document.getElementById('wish-target');
+        const wishContent = document.getElementById('wish-content');
+
+        const createModal = document.getElementById('create-modal');
+        const createWishBtn = document.getElementById('create-wish-btn');
+        const closeCreateBtn = document.getElementById('close-create-modal');
+        const customWishForm = document.getElementById('custom-wish-form');
+
+        const bannerDisplay = document.getElementById('3d-banner-display');
+        const bannerReceiver = document.getElementById('banner-receiver');
+        const bannerText = document.getElementById('banner-text');
+
+        // Audio Toggle
+        audioBtn.addEventListener('click', () => {
+            if (soundEngine.isPlaying) {
+                soundEngine.stop();
+                audioBars.classList.add('opacity-30');
+                audioStatus.textContent = 'Âm Nhạc: Tắt';
+            } else {
+                soundEngine.start();
+                audioBars.classList.remove('opacity-30');
+                audioStatus.textContent = 'Âm Nhạc: Bật';
+            }
+        });
+
+        // Open Wish Modal
+        function showRandomWish() {
+            const randomItem = wishesData[Math.floor(Math.random() * wishesData.length)];
+            
+            wishTarget.textContent = randomItem.target;
+            wishContent.textContent = `"${randomItem.text}"`;
+
+            wishModal.classList.remove('opacity-0', 'pointer-events-none');
+            const card = wishModal.querySelector('.glass-card');
+            card.classList.remove('scale-90');
+            card.classList.add('scale-100');
+        }
+
+        function hideModal(modal) {
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            const card = modal.querySelector('.glass-card');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-90');
+        }
+
+        openWishBtn.addEventListener('click', () => {
+            soundEngine.init();
+            showRandomWish();
+        });
+
+        closeWishBtn.addEventListener('click', () => hideModal(wishModal));
+        nextWishBtn.addEventListener('click', showRandomWish);
+
+        // Clipboard Copying
+        copyWishBtn.addEventListener('click', () => {
+            const textToCopy = `${wishTarget.textContent}: ${wishContent.textContent}`;
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                copyText.textContent = 'Đã Chép!';
+                setTimeout(() => copyText.textContent = 'Sao Chép', 2000);
+            } catch (err) {
+                copyText.textContent = 'Lỗi Sao Chép';
+            }
+            document.body.removeChild(textArea);
+        });
+
+        // Custom Wish Modal Logic
+        createWishBtn.addEventListener('click', () => {
+            createModal.classList.remove('opacity-0', 'pointer-events-none');
+            const card = createModal.querySelector('.glass-card');
+            card.classList.remove('scale-90');
+            card.classList.add('scale-100');
+        });
+
+        closeCreateBtn.addEventListener('click', () => hideModal(createModal));
+
+        // Submit Custom Wish Form
+        customWishForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('custom-name').value;
+            const message = document.getElementById('custom-message').value;
+
+            hideModal(createModal);
+
+            bannerReceiver.textContent = `Tặng: ${name}`;
+            bannerText.textContent = `"${message}"`;
+
+            bannerDisplay.classList.remove('opacity-0');
+            soundEngine.triggerBurstSound();
+
+            if (heartMeshGroup) {
+                heartMeshGroup.scale.set(1.2, 1.2, 1.2);
+                setTimeout(() => {
+                    if (heartMeshGroup) heartMeshGroup.scale.set(1, 1, 1);
+                }, 1000);
+            }
+
+            setTimeout(() => {
+                bannerDisplay.classList.add('opacity-0');
+            }, 8000);
+
+            customWishForm.reset();
+        });
+
+        // Safe Load Initialization
+        window.onload = () => {
+            init3D();
+        };
+    </script>
+</body>
+</html>
